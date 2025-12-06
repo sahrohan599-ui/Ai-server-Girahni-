@@ -25,23 +25,35 @@ GIRAHNI_SYSTEM_PROMPT = """
 # SECTION 2: SPEECH-TO-TEXT - GOOGLE (FIXED VERSION)
 # ============================================
 def speech_to_text(audio_file_path):
-    """
-    SIMPLIFIED STT FOR TESTING: बिना किसी बाहरी API के काम करता है।
-    ESP32 से आई हर ऑडियो के लिए एक टेस्ट टेक्स्ट रिटर्न करेगा।
-    """
-    print(f"[DEBUG] STT Bypass Active. Received audio file: {audio_file_path}")
-    
-    # आप यहाँ टेस्ट टेक्स्ट बदल सकते हैं
-    test_responses = [
-        "नमस्ते, मैं गिरहणी हूँ। आज आपका दिन कैसा रहा?",
-        "हैलो, मौसम तो आज बहुत सुहावना है।",
-        "आपने मुझे बुलाया? मैं आपकी मदद के लिए यहाँ हूँ।"
-    ]
-    
-    import random
-    selected_text = random.choice(test_responses)
-    print(f"[DEBUG] STT Bypass: Returning text -> '{selected_text}'")
-    return selected_text
+    """ऑडियो को टेक्स्ट में बदलें - Google STT (परमानेंट सोल्यूशन)"""
+    try:
+        import speech_recognition as sr
+        recognizer = sr.Recognizer()
+        
+        print(f"[DEBUG] Processing audio file for STT: {audio_file_path}")
+        
+        with sr.AudioFile(audio_file_path) as source:
+            # बैकग्राउंड नॉइज़ कम करें
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            audio = recognizer.record(source)
+            
+            # Google STT (फ्री) - हिंदी के लिए
+            text = recognizer.recognize_google(audio, language="hi-IN")
+            print(f"[SUCCESS] STT Result: {text}")
+            return text
+            
+    except sr.UnknownValueError:
+        error_msg = "मैं आपकी आवाज़ समझ नहीं पाया। कृपया दोबारा बोलें।"
+        print(f"[ERROR] Google could not understand audio")
+        return error_msg
+    except sr.RequestError as e:
+        error_msg = "गूगल सर्विस में समस्या है।"
+        print(f"[ERROR] Google STT request failed: {e}")
+        return error_msg
+    except Exception as e:
+        error_msg = "ऑडियो प्रोसेसिंग में त्रुटि।"
+        print(f"[ERROR] STT failed: {type(e).__name__}: {e}")
+        return error_msg
 
 # ============================================
 # SECTION 3: GET RESPONSE FROM DEEPSEEK AI
