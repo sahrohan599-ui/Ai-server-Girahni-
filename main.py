@@ -24,39 +24,44 @@ GIRAHNI_SYSTEM_PROMPT = """
 # ============================================
 # SECTION 2: SPEECH-TO-TEXT - GOOGLE (FIXED VERSION)
 # ============================================
-import speech_recognition as sr   # ← IMPORTANT: sr always available
+import requests
+import os
 
-def speech_to_text(audio_file_path):
-    """ऑडियो को टेक्स्ट में बदलें - Google STT (परमानेंट सोल्यूशन)"""
+def speech_to_text_elevenlabs(audio_file_path):
+    """ElevenLabs STT API का उपयोग करके ऑडियो को टेक्स्ट में बदलता है।"""
     try:
-        recognizer = sr.Recognizer()
+        # 1. API Key लोड करें
+        api_key = os.environ.get("ELEVENLABS_API_KEY")
+        if not api_key:
+            return "[ERROR] ElevenLabs API Key नहीं मिली। Render पर 'ELEVENLABS_API_KEY' सेट करें।"
 
-        print(f"[DEBUG] Processing audio file for STT: {audio_file_path}")
+        # 2. API के लिए पैरामीटर तैयार करें
+        url = "https://api.elevenlabs.io/v1/speech-to-text"
+        headers = {
+            "xi-api-key": api_key
+        }
 
-        with sr.AudioFile(audio_file_path) as source:
-            # Background noise reduce
-            recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio = recognizer.record(source)
+        # 3. ऑडियो फ़ाइल खोलें और अनुरोध भेजें
+        with open(audio_file_path, 'rb') as audio_file:
+            files = {'file': audio_file}
+            # वैकल्पिक: हिंदी भाषा निर्दिष्ट करने के लिए पैरामीटर
+            data = {'language_code': 'hin'}  # ElevenLabs हिंदी के लिए 'hin' कोड का उपयोग करता है[citation:1]
+            response = requests.post(url, headers=headers, files=files, data=data, timeout=60)
 
-            # Google STT (Free, Hindi support)
-            text = recognizer.recognize_google(audio, language="hi-IN")
-            print(f"[SUCCESS] STT Result: {text}")
-            return text
-
-    except sr.UnknownValueError:
-        error_msg = "मैं आपकी आवाज़ समझ नहीं पाया। कृपया दोबारा बोलें।"
-        print("[ERROR] Google could not understand audio")
-        return error_msg
-
-    except sr.RequestError as e:
-        error_msg = "गूगल सर्विस में समस्या है।"
-        print(f"[ERROR] Google STT request failed: {e}")
-        return error_msg
+        # 4. प्रतिक्रिया को संसाधित करें
+        if response.status_code == 200:
+            result = response.json()
+            # प्रतिक्रिया संरचना API दस्तावेज़ के अनुसार अलग हो सकती है। सबसे सरल तरीका:
+            transcribed_text = result.get('text')
+            print(f"✅ ElevenLabs STT सफल: {transcribed_text[:100]}...")
+            return transcribed_text
+        else:
+            print(f"[ERROR] ElevenLabs API Error: {response.status_code} - {response.text}")
+            return None
 
     except Exception as e:
-        error_msg = "ऑडियो प्रोसेसिंग में त्रुटि।"
-        print(f"[ERROR] STT failed: {type(e).__name__}: {e}")
-        return error_msg
+        print(f"[ERROR] ElevenLabs STT Request Failed: {e}")
+        return None
 
 # ============================================
 # SECTION 3: GET RESPONSE FROM DEEPSEEK AI
