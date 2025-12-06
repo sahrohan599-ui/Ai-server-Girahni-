@@ -27,40 +27,48 @@ GIRAHNI_SYSTEM_PROMPT = """
 def speech_to_text(audio_file_path):
     """
     Converts audio to text using Google Speech Recognition.
-    This is the FREE option. It may have daily limits.
+    FIXED VERSION - Handles all import errors properly.
     """
+    # IMPORT FIX: Import inside the function with proper error handling
     try:
-        # Import inside function to better isolate errors
         import speech_recognition as sr
+    except ImportError as e:
+        print(f"[CRITICAL IMPORT ERROR] speech_recognition not installed: {e}")
+        # Return a friendly Hindi error message
+        return "सर्वर पर आवाज़ समझने की सेवा तैयार नहीं है। कृपया थोड़ी देर बाद कोशिश करें।"
+    
+    try:
         recognizer = sr.Recognizer()
-
-        print(f"[DEBUG STT] Processing file: {audio_file_path}")
+        print(f"[DEBUG STT] Processing audio file: {audio_file_path}")
 
         with sr.AudioFile(audio_file_path) as source:
-            # Reduce background noise for better accuracy
-            recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio_data = recognizer.record(source)
-
-            # Recognize using Google Web Speech API (FREE)
-            # 'hi-IN' is for Hindi-India
-            text = recognizer.recognize_google(audio_data, language='hi-IN')
-            print(f"[DEBUG STT] Success. Text: {text}")
+            # Reduce background noise
+            recognizer.adjust_for_ambient_noise(source, duration=0.3)
+            audio = recognizer.record(source)
+            
+            # Try Hindi first, then English as fallback
+            try:
+                text = recognizer.recognize_google(audio, language='hi-IN')
+            except:
+                # Fallback to English if Hindi fails
+                text = recognizer.recognize_google(audio, language='en-IN')
+            
+            print(f"[DEBUG STT] Success! User said: {text}")
             return text
-
+            
     except sr.UnknownValueError:
-        # Google couldn't understand the audio
-        error_msg = "माफ़ करें, आवाज़ समझ नहीं आई। कृपया दोबारा बोलें।"
-        print(f"[DEBUG STTT] Google STT Error: Could not understand audio.")
+        error_msg = "माफ़ करें, आवाज़ स्पष्ट नहीं थी। कृपया दोबारा बोलें।"
+        print(f"[DEBUG STT] Google could not understand audio.")
         return error_msg
+        
     except sr.RequestError as e:
-        # Could not request results from Google service
-        error_msg = "गूगल सर्विस से कनेक्ट नहीं हो पा रहा है।"
-        print(f"[DEBUG STT] Google STT Request Error: {e}")
+        error_msg = "गूगल सेवा से जुड़ने में समस्या।"
+        print(f"[DEBUG STT] Google STT service error: {e}")
         return error_msg
+        
     except Exception as e:
-        # Catch any other unexpected errors
-        error_msg = "आवाज़ प्रोसेस करने में त्रुटि।"
-        print(f"[DEBUG STT] Unexpected Error in STT: {type(e).__name__}: {e}")
+        error_msg = "आवाज़ प्रोसेस करने में तकनीकी समस्या।"
+        print(f"[DEBUG STT] General error: {type(e).__name__}: {e}")
         return error_msg
 
 # ============================================
