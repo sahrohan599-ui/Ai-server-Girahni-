@@ -26,50 +26,22 @@ GIRAHNI_SYSTEM_PROMPT = """
 # ============================================
 def speech_to_text(audio_file_path):
     """
-    Converts audio to text using Google Speech Recognition.
-    FIXED VERSION - Handles all import errors properly.
+    SIMPLIFIED STT FOR TESTING: बिना किसी बाहरी API के काम करता है।
+    ESP32 से आई हर ऑडियो के लिए एक टेस्ट टेक्स्ट रिटर्न करेगा।
     """
-    # IMPORT FIX: Import inside the function with proper error handling
-    try:
-        import speech_recognition as sr
-    except ImportError as e:
-        print(f"[CRITICAL IMPORT ERROR] speech_recognition not installed: {e}")
-        # Return a friendly Hindi error message
-        return "सर्वर पर आवाज़ समझने की सेवा तैयार नहीं है। कृपया थोड़ी देर बाद कोशिश करें।"
+    print(f"[DEBUG] STT Bypass Active. Received audio file: {audio_file_path}")
     
-    try:
-        recognizer = sr.Recognizer()
-        print(f"[DEBUG STT] Processing audio file: {audio_file_path}")
-
-        with sr.AudioFile(audio_file_path) as source:
-            # Reduce background noise
-            recognizer.adjust_for_ambient_noise(source, duration=0.3)
-            audio = recognizer.record(source)
-            
-            # Try Hindi first, then English as fallback
-            try:
-                text = recognizer.recognize_google(audio, language='hi-IN')
-            except:
-                # Fallback to English if Hindi fails
-                text = recognizer.recognize_google(audio, language='en-IN')
-            
-            print(f"[DEBUG STT] Success! User said: {text}")
-            return text
-            
-    except sr.UnknownValueError:
-        error_msg = "माफ़ करें, आवाज़ स्पष्ट नहीं थी। कृपया दोबारा बोलें।"
-        print(f"[DEBUG STT] Google could not understand audio.")
-        return error_msg
-        
-    except sr.RequestError as e:
-        error_msg = "गूगल सेवा से जुड़ने में समस्या।"
-        print(f"[DEBUG STT] Google STT service error: {e}")
-        return error_msg
-        
-    except Exception as e:
-        error_msg = "आवाज़ प्रोसेस करने में तकनीकी समस्या।"
-        print(f"[DEBUG STT] General error: {type(e).__name__}: {e}")
-        return error_msg
+    # आप यहाँ टेस्ट टेक्स्ट बदल सकते हैं
+    test_responses = [
+        "नमस्ते, मैं गिरहणी हूँ। आज आपका दिन कैसा रहा?",
+        "हैलो, मौसम तो आज बहुत सुहावना है।",
+        "आपने मुझे बुलाया? मैं आपकी मदद के लिए यहाँ हूँ।"
+    ]
+    
+    import random
+    selected_text = random.choice(test_responses)
+    print(f"[DEBUG] STT Bypass: Returning text -> '{selected_text}'")
+    return selected_text
 
 # ============================================
 # SECTION 3: GET RESPONSE FROM DEEPSEEK AI
