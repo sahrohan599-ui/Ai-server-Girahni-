@@ -31,7 +31,7 @@ def speech_to_text_elevenlabs(audio_file_path):
     """ElevenLabs STT API का उपयोग करके ऑडियो को टेक्स्ट में बदलता है।"""
     try:
         # 1. API Key लोड करें
-        api_key = os.environ.get("ELEVENLABS_API_KEY")
+        api_key = os.environ.get("SPEECH_TO_TEXT_ELEVENLABS_API_KEY")
         if not api_key:
             return "[ERROR] ElevenLabs API Key नहीं मिली। Render पर 'ELEVENLABS_API_KEY' सेट करें।"
 
