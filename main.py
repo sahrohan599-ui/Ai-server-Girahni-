@@ -39,25 +39,78 @@ GIRAHNI_SYSTEM_PROMPT = """You are Girahni, a loving and helpful voice assistant
 def speech_to_text(audio_file):
     """Convert audio to text using ElevenLabs STT."""
     url = "https://api.elevenlabs.io/v1/speech-to-text"
-    headers = {"xi-api-key": ELEVENLABS_API_KEY}
     
-    # CRITICAL FIX: Add model_id parameter (was missing)
-    params = {
-        'model_id': 'scribe_v1'  # ElevenLabs STT model
+    # ElevenLabs STT needs BOTH headers and form data
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Accept": "application/json"
     }
     
-    files = {'file': ('audio.wav', audio_file, 'audio/wav')}
+    # CRITICAL FIX: model_id should be in BOTH data and params
+    data = {'model_id': 'scribe_v1'}
+    params = {'model_id': 'scribe_v1'}
+    
+    # Prepare the audio file
+    files = {
+        'file': ('audio.wav', audio_file.read(), 'audio/wav')
+    }
+    
+    # Reset file pointer
+    audio_file.seek(0)
     
     try:
-        response = requests.post(url, headers=headers, files=files, params=params, timeout=30)
+        app.logger.info("Sending audio to ElevenLabs STT...")
+        
+        # Try Method 1: Using data parameter (form data)
+        response = requests.post(
+            url, 
+            headers=headers, 
+            files=files, 
+            data=data,  # model_id here
+            timeout=60
+        )
+        
+        app.logger.info(f"STT Response Status: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
-            return result.get('text', '')
+            text = result.get('text', '').strip()
+            if text:
+                app.logger.info(f"STT Success: User said - {text[:100]}...")
+            else:
+                app.logger.warning("STT returned empty text")
+            return text
         else:
+            # Log detailed error
             app.logger.error(f"STT Error {response.status_code}: {response.text}")
-            return None
+            
+            # Try Method 2: Different model_id format
+            app.logger.info("Trying alternative method...")
+            
+            # Reset file pointer again
+            audio_file.seek(0)
+            files = {'file': ('audio.wav', audio_file.read(), 'audio/wav')}
+            
+            # Try with params instead of data
+            response2 = requests.post(
+                url,
+                headers=headers,
+                files=files,
+                params=params,  # model_id as query param
+                timeout=60
+            )
+            
+            if response2.status_code == 200:
+                result = response2.json()
+                text = result.get('text', '').strip()
+                app.logger.info("STT succeeded with params method")
+                return text
+            else:
+                app.logger.error(f"STT Alternative method failed: {response2.status_code}")
+                return None
+                
     except Exception as e:
-        app.logger.error(f"STT Request Failed: {str(e)}")
+        app.logger.error(f"STT Request Failed: {str(e)}", exc_info=True)
         return None
 
 def get_ai_response(user_text):
