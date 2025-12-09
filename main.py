@@ -37,81 +37,69 @@ GIRAHNI_SYSTEM_PROMPT = """You are Girahni, a loving and helpful voice assistant
 # HELPER FUNCTIONS
 # ============================
 def speech_to_text(audio_file):
-    """Convert audio to text using ElevenLabs STT."""
+    """Convert audio to text using ElevenLabs STT"""
     url = "https://api.elevenlabs.io/v1/speech-to-text"
     
-    # ElevenLabs STT needs BOTH headers and form data
     headers = {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "xi-api-key": ELEVENLABS_API_KEY
     }
     
-    # CRITICAL FIX: model_id should be in BOTH data and params
-    data = {'model_id': 'scribe_v1'}
-    params = {'model_id': 'scribe_v1'}
-    
-    # Prepare the audio file
+    # Prepare multipart form-data CORRECTLY, including model_id
     files = {
-        'file': ('audio.wav', audio_file.read(), 'audio/wav')
+        'file': ('audio.wav', audio_file, 'audio/wav'),
+        'model_id': (None, 'scribe_v1')  # Include model_id here
     }
-    
-    # Reset file pointer
-    audio_file.seek(0)
     
     try:
-        app.logger.info("Sending audio to ElevenLabs STT...")
+        logger.info("Sending audio to ElevenLabs STT...")
         
-        # Try Method 1: Using data parameter (form data)
+        # Send request with proper form-data
         response = requests.post(
-            url, 
-            headers=headers, 
-            files=files, 
-            data=data,  # model_id here
+            url,
+            headers=headers,
+            files=files,
             timeout=60
         )
         
-        app.logger.info(f"STT Response Status: {response.status_code}")
+        logger.info(f"STT Response Status: {response.status_code}")
         
         if response.status_code == 200:
             result = response.json()
             text = result.get('text', '').strip()
             if text:
-                app.logger.info(f"STT Success: User said - {text[:100]}...")
+                logger.info(f"STT Success: User said - '{text[:100]}'")
+                return text
             else:
-                app.logger.warning("STT returned empty text")
-            return text
+                logger.warning("STT returned empty text")
+                return ""
         else:
-            # Log detailed error
-            app.logger.error(f"STT Error {response.status_code}: {response.text}")
+            logger.error(f"STT Error {response.status_code}: {response.text}")
             
-            # Try Method 2: Different model_id format
-            app.logger.info("Trying alternative method...")
+            # Try with alternative model if first fails
+            logger.info("Trying alternative model: scribe_v1.1")
+            files['model_id'] = (None, 'scribe_v1.1')
             
-            # Reset file pointer again
+            # Reset file pointer
             audio_file.seek(0)
-            files = {'file': ('audio.wav', audio_file.read(), 'audio/wav')}
+            files = {
+                'file': ('audio.wav', audio_file, 'audio/wav'),
+                'model_id': (None, 'scribe_v1.1')
+            }
             
-            # Try with params instead of data
-            response2 = requests.post(
-                url,
-                headers=headers,
-                files=files,
-                params=params,  # model_id as query param
-                timeout=60
-            )
+            response2 = requests.post(url, headers=headers, files=files, timeout=60)
             
             if response2.status_code == 200:
                 result = response2.json()
-                text = result.get('text', '').strip()
-                app.logger.info("STT succeeded with params method")
-                return text
+                return result.get('text', '').strip()
             else:
-                app.logger.error(f"STT Alternative method failed: {response2.status_code}")
+                logger.error(f"STT Alternative failed: {response2.status_code} - {response2.text}")
                 return None
                 
     except Exception as e:
-        app.logger.error(f"STT Request Failed: {str(e)}", exc_info=True)
+        logger.error(f"STT Request Failed: {str(e)}", exc_info=True)
         return None
+    
 
 def get_ai_response(user_text):
     """Get response from DeepSeek via OpenRouter."""
