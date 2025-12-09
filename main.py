@@ -6,6 +6,11 @@ import io
 import os
 from dotenv import load_dotenv
 import logging
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables
 load_dotenv()
